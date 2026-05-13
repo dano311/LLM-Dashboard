@@ -44,7 +44,7 @@ function loadEnvFile() {
       if (index === -1) return;
       const key = trimmed.slice(0, index).trim();
       const value = trimmed.slice(index + 1).trim();
-      if (!process.env[key]) process.env[key] = value;
+      if (process.env[key] === undefined) process.env[key] = value;
     });
   } catch {
     // The app can run without .env; command-line env vars still work.
@@ -402,6 +402,14 @@ async function route(req, res) {
 }
 
 const server = createServer(route);
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`Port ${port} is already in use. Mission Control may already be running at http://${host}:${port}`);
+  } else {
+    console.error(error);
+  }
+  process.exit(1);
+});
 server.listen(port, host, () => {
   const authMode = authUser && authPassword ? "auth enabled" : "auth disabled";
   console.log(`Mission Control listening on http://${host}:${port} (${authMode})`);
