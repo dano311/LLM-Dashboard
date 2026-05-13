@@ -6,33 +6,43 @@ Mission Control is designed to sit behind a private network layer or a zero-trus
 
 Good when you want private access from your own devices.
 
+This is the recommended first setup for this project.
+
 1. Install and sign in to Tailscale on the machine running Mission Control.
 2. Set a username and password in `.env`:
 
    ```powershell
    MC_USER=operator
    MC_PASSWORD=use-a-long-unique-password
-   MC_HOST=0.0.0.0
+   MC_HOST=127.0.0.1
    MC_PORT=8787
    ```
 
 3. Start the panel:
 
    ```powershell
-   node server.mjs
+   .\scripts\start-mission-control.ps1
    ```
 
-4. Open it from another device on your tailnet:
-
-   ```text
-   http://<tailscale-device-name>:8787
-   ```
-
-5. Optional: publish it with Tailscale Serve if you want a tailnet HTTPS URL:
+4. Enable a private Tailscale HTTPS URL:
 
    ```powershell
-   tailscale serve --bg http://127.0.0.1:8787
+   .\scripts\enable-tailscale-serve.ps1
    ```
+
+5. Open the HTTPS URL shown by:
+
+   ```powershell
+   tailscale serve status
+   ```
+
+Direct tailnet IP fallback is also possible if you start the server with `-HostName 0.0.0.0`, but Tailscale Serve is preferred because Mission Control can stay bound to localhost.
+
+To disable the private HTTPS forwarding:
+
+```powershell
+.\scripts\disable-tailscale-serve.ps1
+```
 
 ## Option B: Cloudflare Tunnel
 
