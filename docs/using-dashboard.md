@@ -116,12 +116,13 @@ The OpenClaw card is wired for this gateway:
 OPENCLAW_URL=http://100.99.165.16:18789
 OPENCLAW_CANVAS_URL=http://100.99.165.16:18789/__openclaw__/canvas/
 OPENCLAW_WS_URL=ws://100.99.165.16:18789/
+OPENCLAW_AUTH_TOKEN=clawx-your-token-here
 ```
 
 Mission Control can use:
 
 ```text
-GET /health
+GET /health with Authorization: Bearer <OPENCLAW_AUTH_TOKEN>
 Open /__openclaw__/canvas/
 ```
 
@@ -132,6 +133,14 @@ ws://100.99.165.16:18789/
 ```
 
 The dashboard records that WebSocket endpoint, but live chat needs one more adapter once we know the exact OpenClaw WebSocket message format.
+
+Do not commit the OpenClaw token. Put it only in `.env`.
+
+Auth support today:
+
+- Server-side HTTP calls such as Health use `Authorization: Bearer <OPENCLAW_AUTH_TOKEN>`.
+- The browser Open button cannot add an Authorization header. For the canvas page, use OpenClaw's normal cookie login, or set `OPENCLAW_CANVAS_URL` to a token URL if you accept that the token will be visible in browser history.
+- WebSocket chat will use the token in the future OpenClaw adapter. Browser WebSockets cannot set arbitrary Authorization headers directly, so the safest implementation is a Mission Control server-side WebSocket bridge.
 
 If the Open button or Health action cannot reach OpenClaw, check the mini PC:
 

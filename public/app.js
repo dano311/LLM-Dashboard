@@ -477,6 +477,7 @@ function infoPanel(agent) {
         <div><span>Latency</span><strong>${escapeHtml(agent.resources?.latency || "n/a")}</strong></div>
         <div><span>Base URL</span><strong>${escapeHtml(agent.endpoints?.open || "not configured")}</strong></div>
         ${agent.endpoints?.websocket ? `<div><span>WebSocket</span><strong>${escapeHtml(agent.endpoints.websocket)}</strong></div>` : ""}
+        ${agent.auth ? `<div><span>Auth</span><strong>${agent.auth.configured ? "Token configured" : `Missing ${escapeHtml(agent.auth.tokenEnv || "token")}`}</strong></div>` : ""}
       </div>
       <div class="capability-list">
         ${(agent.capabilities || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
@@ -516,6 +517,7 @@ function credentialsPanel(agent) {
     <div class="credential-list">
       <div><span>${escapeHtml(agent.baseUrlEnv || "AGENT_URL")}</span><strong>${agent.endpoints?.open ? "Configured" : "Missing"}</strong></div>
       ${agent.webSocketUrlEnv ? `<div><span>${escapeHtml(agent.webSocketUrlEnv)}</span><strong>${agent.endpoints?.websocket ? "Configured" : "Missing"}</strong></div>` : ""}
+      ${agent.auth?.tokenEnv ? `<div><span>${escapeHtml(agent.auth.tokenEnv)}</span><strong>${agent.auth.configured ? "Configured" : "Missing"}</strong></div>` : ""}
       <div><span>Read-only logs token</span><strong>Recommended</strong></div>
       <div><span>Action token</span><strong>Use least privilege</strong></div>
     </div>
@@ -538,6 +540,7 @@ function configPanel(agent) {
       baseUrlEnv: agent.baseUrlEnv,
       openUrlEnv: agent.openUrlEnv,
       webSocketUrlEnv: agent.webSocketUrlEnv,
+      auth: agent.auth,
       transport: agent.transport,
       routes: agent.routes,
       endpoints: agent.endpoints,

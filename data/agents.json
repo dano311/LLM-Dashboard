@@ -10,6 +10,11 @@
       "baseUrlEnv": "OPENCLAW_URL",
       "openUrlEnv": "OPENCLAW_CANVAS_URL",
       "webSocketUrlEnv": "OPENCLAW_WS_URL",
+      "auth": {
+        "type": "bearer",
+        "tokenEnv": "OPENCLAW_AUTH_TOKEN",
+        "note": "Used by Mission Control for server-side HTTP calls such as health. Browser-opened canvas pages need cookie auth or an explicit token URL."
+      },
       "transport": {
         "kind": "websocket",
         "note": "Realtime OpenClaw traffic uses WebSocket; chat requires a protocol-specific adapter."

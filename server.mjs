@@ -120,6 +120,7 @@ function enrichAgent(agent) {
   const baseUrl = agent.baseUrlEnv ? process.env[agent.baseUrlEnv] : agent.baseUrl;
   const openUrl = agent.openUrlEnv ? process.env[agent.openUrlEnv] : agent.openUrl;
   const webSocketUrl = agent.webSocketUrlEnv ? process.env[agent.webSocketUrlEnv] : agent.webSocketUrl;
+  const auth = enrichAuth(agent.auth);
   const routes = agent.routes || {};
   const endpoints = {};
   Object.entries(routes).forEach(([key, route]) => {
@@ -130,11 +131,28 @@ function enrichAgent(agent) {
   if (webSocketUrl) endpoints.websocket = webSocketUrl;
   return {
     ...agent,
+    auth,
     endpoints,
     actionLabels: (agent.actions || []).map((action) => ({
       id: action,
       label: actionLabels[action] || titleCase(action)
     }))
+  };
+}
+
+function enrichAuth(auth) {
+  if (!auth) return undefined;
+  if (auth.type === "bearer" && auth.tokenEnv) {
+    return {
+      type: "bearer",
+      tokenEnv: auth.tokenEnv,
+      configured: Boolean(process.env[auth.tokenEnv]),
+      note: auth.note || ""
+    };
+  }
+  return {
+    ...auth,
+    configured: false
   };
 }
 
@@ -234,10 +252,14 @@ async function proxyAgent(agent, routeName, payload) {
   if (!endpoint) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
+  const headers = {
+    ...(payload ? { "Content-Type": "application/json" } : {}),
+    ...agentAuthHeaders(agent)
+  };
   try {
     const response = await fetch(endpoint, {
       method: payload ? "POST" : "GET",
-      headers: payload ? { "Content-Type": "application/json" } : undefined,
+      headers: Object.keys(headers).length ? headers : undefined,
       body: payload ? JSON.stringify(payload) : undefined,
       signal: controller.signal
     });
@@ -266,6 +288,13 @@ async function proxyAgent(agent, routeName, payload) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function agentAuthHeaders(agent) {
+  if (agent.auth?.type !== "bearer" || !agent.auth.tokenEnv) return {};
+  const token = process.env[agent.auth.tokenEnv];
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function handleChat(req, res, agentId) {
