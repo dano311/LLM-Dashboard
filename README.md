@@ -66,6 +66,8 @@ Edit [data/agents.json](data/agents.json). Each agent can define direct endpoint
 
 When `HERMES_URL` is set, the server builds full URLs from those routes. If it is not set, the app stays in simulated mode.
 
+For day-to-day use and LLM setup, see [docs/using-dashboard.md](docs/using-dashboard.md).
+
 ## Remote Access
 
 Start local-only while configuring:
