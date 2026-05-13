@@ -8,6 +8,7 @@ const state = {
   selectedAgentId: "hermes",
   inspectorTab: "chat",
   deploymentTab: "tailscale",
+  activeNav: "dashboard",
   search: "",
   theme: localStorage.getItem("mission-theme") || "dark"
 };
@@ -235,7 +236,11 @@ function agentIcon(agentId) {
 }
 
 function actionIcon(action) {
-  return action === "chat" ? "agents" : action === "logs" ? "list" : action === "open" ? "external" : "refresh";
+  if (action === "chat") return "agents";
+  if (action === "logs") return "list";
+  if (action === "open") return "external";
+  if (action === "health") return "monitor";
+  return "refresh";
 }
 
 function renderHealth() {
@@ -317,6 +322,88 @@ function renderAudit() {
     .join("");
 }
 
+function setActiveNav(id) {
+  state.activeNav = id;
+  qsa(".nav-item").forEach((button) => {
+    const value = button.dataset.view || button.dataset.infra || button.dataset.config;
+    button.classList.toggle("active", value === id);
+  });
+}
+
+function focusPanel(selector, label) {
+  const panel = qs(selector);
+  if (!panel) return;
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  panel.classList.remove("focus-pulse");
+  window.requestAnimationFrame(() => panel.classList.add("focus-pulse"));
+  if (label) showToast(label);
+}
+
+function focusInspector(tab, label) {
+  state.inspectorTab = tab;
+  renderInspector();
+  const inspector = qs(".inspector");
+  inspector?.scrollIntoView({ behavior: "smooth", block: "start" });
+  inspector?.classList.remove("focus-pulse");
+  window.requestAnimationFrame(() => inspector?.classList.add("focus-pulse"));
+  showToast(label);
+}
+
+function showToast(message) {
+  const toast = qs("#navToast");
+  toast.textContent = message;
+  toast.classList.add("visible");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove("visible"), 2400);
+}
+
+function handleOverviewNav(id) {
+  setActiveNav(id);
+  const actions = {
+    dashboard: () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      showToast("Dashboard overview");
+    },
+    agents: () => focusPanel(".agents-panel", "Agent directory"),
+    systems: () => focusPanel(".health-panel", "System health"),
+    deployments: () => focusPanel(".deployment-panel", "Remote access and deployments"),
+    credentials: () => focusInspector("credentials", "Agent credential map"),
+    logs: () => focusInspector("logs", "Selected agent logs"),
+    audit: () => focusPanel(".audit-panel", "Audit trail"),
+    alerts: () => focusPanel(".health-panel", "Alerts are shown in system health and audit trail")
+  };
+  actions[id]?.();
+}
+
+function handleInfrastructureNav(id) {
+  setActiveNav(id);
+  if (id === "tailscale" || id === "cloudflare") {
+    state.deploymentTab = id;
+    renderDeployment();
+    focusPanel(".deployment-panel", id === "tailscale" ? "Tailscale access" : "Cloudflare Tunnel setup");
+    return;
+  }
+  if (id === "endpoints") {
+    focusInspector("config", "Endpoint routes for the selected agent");
+    return;
+  }
+  if (id === "secrets") {
+    focusInspector("credentials", "Secrets should stay in .env or a vault");
+  }
+}
+
+function handleConfigNav(id) {
+  setActiveNav(id);
+  const messages = {
+    settings: "Settings currently live in .env and data/agents.json",
+    templates: "Agent templates are in docs/using-dashboard.md",
+    policies: "Access policy is currently Basic Auth plus Tailscale",
+    integrations: "Add integrations in data/agents.json"
+  };
+  if (id === "integrations") focusPanel(".agents-panel", messages[id]);
+  else focusInspector("config", messages[id]);
+}
+
 function renderInspector() {
   const agent = selectedAgent();
   if (!agent) return;
@@ -389,6 +476,7 @@ function infoPanel(agent) {
         <div><span>Memory</span><strong>${escapeHtml(agent.resources?.memory || "n/a")}</strong></div>
         <div><span>Latency</span><strong>${escapeHtml(agent.resources?.latency || "n/a")}</strong></div>
         <div><span>Base URL</span><strong>${escapeHtml(agent.endpoints?.open || "not configured")}</strong></div>
+        ${agent.endpoints?.websocket ? `<div><span>WebSocket</span><strong>${escapeHtml(agent.endpoints.websocket)}</strong></div>` : ""}
       </div>
       <div class="capability-list">
         ${(agent.capabilities || []).map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
@@ -412,6 +500,7 @@ function actionsPanel(agent) {
 function actionHelp(action) {
   const help = {
     chat: "Open chat workspace",
+    health: "Check health endpoint",
     logs: "Fetch latest agent logs",
     restart: "Restart or queue restart",
     open: "Open direct agent UI"
@@ -426,6 +515,7 @@ function credentialsPanel(agent) {
     </div>
     <div class="credential-list">
       <div><span>${escapeHtml(agent.baseUrlEnv || "AGENT_URL")}</span><strong>${agent.endpoints?.open ? "Configured" : "Missing"}</strong></div>
+      ${agent.webSocketUrlEnv ? `<div><span>${escapeHtml(agent.webSocketUrlEnv)}</span><strong>${agent.endpoints?.websocket ? "Configured" : "Missing"}</strong></div>` : ""}
       <div><span>Read-only logs token</span><strong>Recommended</strong></div>
       <div><span>Action token</span><strong>Use least privilege</strong></div>
     </div>
@@ -446,6 +536,9 @@ function configPanel(agent) {
       id: agent.id,
       name: agent.name,
       baseUrlEnv: agent.baseUrlEnv,
+      openUrlEnv: agent.openUrlEnv,
+      webSocketUrlEnv: agent.webSocketUrlEnv,
+      transport: agent.transport,
       routes: agent.routes,
       endpoints: agent.endpoints,
       actions: agent.actions
@@ -521,6 +614,20 @@ async function handleAgentAction(agentId, action) {
     render();
     return;
   }
+  if (action === "health") {
+    try {
+      const data = await api(`/api/agents/${agentId}/action`, {
+        method: "POST",
+        body: JSON.stringify({ action })
+      });
+      addLocalEvent(data.message || "Health check completed");
+      state.inspectorTab = "config";
+      render();
+    } catch (error) {
+      addLocalEvent(error.message, "error");
+    }
+    return;
+  }
   try {
     const data = await api(`/api/agents/${agentId}/action`, {
       method: "POST",
@@ -550,6 +657,15 @@ function addLocalEvent(message, status = "success") {
 }
 
 function bindEvents() {
+  qsa("[data-view]").forEach((button) => {
+    button.addEventListener("click", () => handleOverviewNav(button.dataset.view));
+  });
+  qsa("[data-infra]").forEach((button) => {
+    button.addEventListener("click", () => handleInfrastructureNav(button.dataset.infra));
+  });
+  qsa("[data-config]").forEach((button) => {
+    button.addEventListener("click", () => handleConfigNav(button.dataset.config));
+  });
   qs("#searchInput").addEventListener("input", (event) => {
     state.search = event.target.value;
     renderAgents();

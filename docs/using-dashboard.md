@@ -108,6 +108,38 @@ OPENCLAW_URL=http://100.91.188.128:8790
 
 Then make sure the agent's `routes` in `data/agents.json` match its API.
 
+## Current OpenClaw Gateway Setup
+
+The OpenClaw card is wired for this gateway:
+
+```env
+OPENCLAW_URL=http://100.99.165.16:18789
+OPENCLAW_CANVAS_URL=http://100.99.165.16:18789/__openclaw__/canvas/
+OPENCLAW_WS_URL=ws://100.99.165.16:18789/
+```
+
+Mission Control can use:
+
+```text
+GET /health
+Open /__openclaw__/canvas/
+```
+
+OpenClaw realtime uses WebSocket at:
+
+```text
+ws://100.99.165.16:18789/
+```
+
+The dashboard records that WebSocket endpoint, but live chat needs one more adapter once we know the exact OpenClaw WebSocket message format.
+
+If the Open button or Health action cannot reach OpenClaw, check the mini PC:
+
+- OpenClaw is running.
+- It is listening on `0.0.0.0:18789`, not only `127.0.0.1:18789`.
+- The mini PC firewall allows inbound TCP `18789` from Tailscale.
+- The Tailscale IP is still `100.99.165.16`.
+
 ## What I Would Wire Next
 
 1. Persistent "Add Agent" and "Edit Agent" forms inside the dashboard.

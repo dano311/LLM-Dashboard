@@ -26,6 +26,7 @@ const mimeTypes = {
 
 const actionLabels = {
   chat: "Chat",
+  health: "Health",
   logs: "Logs",
   restart: "Restart",
   open: "Open",
@@ -117,12 +118,16 @@ async function readBody(req) {
 
 function enrichAgent(agent) {
   const baseUrl = agent.baseUrlEnv ? process.env[agent.baseUrlEnv] : agent.baseUrl;
+  const openUrl = agent.openUrlEnv ? process.env[agent.openUrlEnv] : agent.openUrl;
+  const webSocketUrl = agent.webSocketUrlEnv ? process.env[agent.webSocketUrlEnv] : agent.webSocketUrl;
   const routes = agent.routes || {};
   const endpoints = {};
   Object.entries(routes).forEach(([key, route]) => {
     endpoints[key] = buildUrl(baseUrl, route);
   });
-  if (baseUrl) endpoints.open = baseUrl;
+  if (openUrl) endpoints.open = openUrl;
+  else if (baseUrl && !endpoints.open) endpoints.open = baseUrl;
+  if (webSocketUrl) endpoints.websocket = webSocketUrl;
   return {
     ...agent,
     endpoints,
@@ -307,6 +312,13 @@ function normalizeAgentReply(agent, message, proxied) {
     };
   }
   if (agent.id === "openclaw") {
+    if (agent.transport?.kind === "websocket") {
+      return {
+        content:
+          "OpenClaw is wired as a gateway agent. Health and canvas opening use HTTP, but realtime chat uses WebSocket. I can add the chat adapter after we know the exact WebSocket message format OpenClaw expects.",
+        meta: agent.endpoints?.websocket || proxied?.message || "websocket"
+      };
+    }
     return {
       content:
         "OpenClaw is ready in simulated mode. Connect OPENCLAW_URL to enable live repository analysis, code search, and task-specific context retrieval.",
@@ -331,6 +343,24 @@ async function handleAction(req, res, agentId) {
       action,
       url: agent.endpoints?.open || "",
       message: agent.endpoints?.open ? "Open URL available" : "No live URL configured"
+    });
+  }
+  if (action === "health") {
+    const proxied = await proxyAgent(agent, "health");
+    if (proxied?.ok) {
+      return sendJson(res, 200, {
+        ok: true,
+        action,
+        proxied: true,
+        message: `${agent.name} health check responded.`,
+        data: proxied.data
+      });
+    }
+    return sendJson(res, proxied ? 502 : 200, {
+      ok: !proxied,
+      action,
+      proxied: Boolean(proxied),
+      message: proxied?.message || `No health route configured for ${agent.name}.`
     });
   }
   const proxied = await proxyAgent(agent, action, { action, agentId });

@@ -5,14 +5,18 @@
       "name": "OpenClaw",
       "kind": "Code intelligence",
       "status": "online",
-      "version": "v1.3.2",
-      "summary": "Repository intelligence and code analysis agent.",
+      "version": "gateway",
+      "summary": "OpenClaw gateway on foxbox with HTTP health and WebSocket realtime.",
       "baseUrlEnv": "OPENCLAW_URL",
+      "openUrlEnv": "OPENCLAW_CANVAS_URL",
+      "webSocketUrlEnv": "OPENCLAW_WS_URL",
+      "transport": {
+        "kind": "websocket",
+        "note": "Realtime OpenClaw traffic uses WebSocket; chat requires a protocol-specific adapter."
+      },
       "routes": {
         "health": "/health",
-        "chat": "/chat",
-        "logs": "/logs",
-        "restart": "/restart"
+        "open": "/__openclaw__/canvas/"
       },
       "resources": {
         "cpu": 12,
@@ -22,14 +26,14 @@
       "capabilities": [
         "Repo search",
         "Code analysis",
-        "Task planning",
-        "Change summaries"
+        "Realtime gateway",
+        "Canvas"
       ],
       "actions": [
+        "open",
+        "health",
         "chat",
-        "logs",
-        "restart",
-        "open"
+        "logs"
       ],
       "accent": "green"
     },
