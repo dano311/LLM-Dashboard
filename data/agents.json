@@ -1,0 +1,345 @@
+{
+  "agents": [
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "kind": "Code intelligence",
+      "status": "online",
+      "version": "v1.3.2",
+      "summary": "Repository intelligence and code analysis agent.",
+      "baseUrlEnv": "OPENCLAW_URL",
+      "routes": {
+        "health": "/health",
+        "chat": "/chat",
+        "logs": "/logs",
+        "restart": "/restart"
+      },
+      "resources": {
+        "cpu": 12,
+        "memory": "1.1 GB",
+        "latency": "84 ms"
+      },
+      "capabilities": [
+        "Repo search",
+        "Code analysis",
+        "Task planning",
+        "Change summaries"
+      ],
+      "actions": [
+        "chat",
+        "logs",
+        "restart",
+        "open"
+      ],
+      "accent": "green"
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Agent",
+      "kind": "Autonomous runner",
+      "status": "online",
+      "version": "v1.2.1",
+      "summary": "Autonomous task runner and orchestration agent.",
+      "baseUrlEnv": "HERMES_URL",
+      "routes": {
+        "health": "/health",
+        "chat": "/chat",
+        "logs": "/logs",
+        "restart": "/restart",
+        "tasks": "/tasks"
+      },
+      "resources": {
+        "cpu": 18,
+        "memory": "1.5 GB",
+        "latency": "112 ms"
+      },
+      "capabilities": [
+        "Task execution",
+        "Build orchestration",
+        "Command plans",
+        "Result summaries"
+      ],
+      "actions": [
+        "chat",
+        "logs",
+        "restart",
+        "open"
+      ],
+      "accent": "green"
+    },
+    {
+      "id": "codex",
+      "name": "Codex",
+      "kind": "Engineering agent",
+      "status": "online",
+      "version": "v0.15.0",
+      "summary": "Code execution and repository editing agent.",
+      "baseUrlEnv": "CODEX_URL",
+      "routes": {
+        "health": "/health",
+        "chat": "/chat",
+        "logs": "/logs"
+      },
+      "resources": {
+        "cpu": 16,
+        "memory": "1.2 GB",
+        "latency": "96 ms"
+      },
+      "capabilities": [
+        "Code edits",
+        "Tests",
+        "Review",
+        "Git workflow"
+      ],
+      "actions": [
+        "chat",
+        "logs",
+        "open"
+      ],
+      "accent": "green"
+    },
+    {
+      "id": "claude",
+      "name": "Claude",
+      "kind": "Assistant",
+      "status": "idle",
+      "version": "v1.0.8",
+      "summary": "Reasoning and writing assistant.",
+      "baseUrlEnv": "CLAUDE_URL",
+      "routes": {
+        "health": "/health",
+        "chat": "/chat",
+        "logs": "/logs"
+      },
+      "resources": {
+        "cpu": 6,
+        "memory": "0.8 GB",
+        "latency": "145 ms"
+      },
+      "capabilities": [
+        "Writing",
+        "Planning",
+        "Long-context review"
+      ],
+      "actions": [
+        "chat",
+        "logs",
+        "open"
+      ],
+      "accent": "amber"
+    },
+    {
+      "id": "local-llm",
+      "name": "Local LLM",
+      "kind": "Runtime",
+      "status": "online",
+      "version": "v0.9.4",
+      "summary": "Local model runtime for private inference.",
+      "baseUrlEnv": "LOCAL_LLM_URL",
+      "routes": {
+        "health": "/health",
+        "chat": "/v1/chat/completions",
+        "logs": "/logs"
+      },
+      "resources": {
+        "cpu": 22,
+        "memory": "3.6 GB",
+        "latency": "68 ms"
+      },
+      "capabilities": [
+        "Private chat",
+        "Embeddings",
+        "Offline inference"
+      ],
+      "actions": [
+        "chat",
+        "logs",
+        "open"
+      ],
+      "accent": "green"
+    },
+    {
+      "id": "automation-runner",
+      "name": "Automation Runner",
+      "kind": "Scheduler",
+      "status": "online",
+      "version": "v1.1.0",
+      "summary": "Scheduled jobs and automation executor.",
+      "routes": {
+        "logs": "/logs"
+      },
+      "resources": {
+        "cpu": 9,
+        "memory": "0.9 GB",
+        "latency": "52 ms"
+      },
+      "capabilities": [
+        "Recurring tasks",
+        "Alerts",
+        "Backups",
+        "Reports"
+      ],
+      "actions": [
+        "logs",
+        "restart"
+      ],
+      "accent": "green"
+    },
+    {
+      "id": "vector-store",
+      "name": "Vector Store",
+      "kind": "Knowledge",
+      "status": "healthy",
+      "version": "v0.6.3",
+      "summary": "Embedding store and semantic index.",
+      "resources": {
+        "cpu": 8,
+        "memory": "1.0 GB",
+        "latency": "41 ms"
+      },
+      "capabilities": [
+        "Embeddings",
+        "Semantic search",
+        "Collections"
+      ],
+      "actions": [
+        "logs",
+        "restart"
+      ],
+      "accent": "green"
+    },
+    {
+      "id": "web-crawler",
+      "name": "Web Crawler",
+      "kind": "Ingestion",
+      "status": "idle",
+      "version": "v0.7.1",
+      "summary": "Web crawling and content extraction.",
+      "resources": {
+        "cpu": 5,
+        "memory": "0.6 GB",
+        "latency": "190 ms"
+      },
+      "capabilities": [
+        "Crawl queues",
+        "Extraction",
+        "Content sync"
+      ],
+      "actions": [
+        "logs",
+        "restart"
+      ],
+      "accent": "amber"
+    }
+  ],
+  "systems": {
+    "health": [
+      {
+        "label": "CPU",
+        "value": "16%",
+        "detail": "steady",
+        "trend": "soft-rise"
+      },
+      {
+        "label": "Memory",
+        "value": "7.1 GB",
+        "detail": "45%",
+        "trend": "flat"
+      },
+      {
+        "label": "Disk",
+        "value": "128 GB",
+        "detail": "available",
+        "trend": "rise"
+      },
+      {
+        "label": "Network",
+        "value": "3.2 / 4.7 Mbps",
+        "detail": "tx/rx",
+        "trend": "pulse"
+      },
+      {
+        "label": "Agents Online",
+        "value": "6 / 7",
+        "detail": "fleet",
+        "trend": "flat"
+      },
+      {
+        "label": "Active Alerts",
+        "value": "3",
+        "detail": "review",
+        "trend": "warn"
+      }
+    ],
+    "deployments": {
+      "tailscale": {
+        "status": "Connected",
+        "node": "mission-control",
+        "address": "100.64.0.5",
+        "exitNode": "mission-exit-us-east",
+        "aclTag": "tag:mission-control"
+      },
+      "cloudflare": {
+        "status": "Ready to configure",
+        "hostname": "mission.example.com",
+        "tunnel": "mission-control",
+        "access": "recommended"
+      }
+    }
+  },
+  "events": [
+    {
+      "time": "09:43",
+      "actor": "operator",
+      "message": "Ran task on Hermes Agent",
+      "status": "success"
+    },
+    {
+      "time": "09:41",
+      "actor": "operator",
+      "message": "Connected to Hermes Agent",
+      "status": "success"
+    },
+    {
+      "time": "09:32",
+      "actor": "operator",
+      "message": "Restarted OpenClaw",
+      "status": "success"
+    },
+    {
+      "time": "09:15",
+      "actor": "operator",
+      "message": "Updated credential: GitHub token",
+      "status": "success"
+    },
+    {
+      "time": "09:02",
+      "actor": "system",
+      "message": "Backup completed",
+      "status": "success"
+    }
+  ],
+  "revisions": [
+    {
+      "sha": "a1b2c3d",
+      "title": "Update agent orchestrator",
+      "author": "operator",
+      "age": "2m ago",
+      "status": "success"
+    },
+    {
+      "sha": "9f8e7d6",
+      "title": "Fix log streaming timeout",
+      "author": "operator",
+      "age": "18m ago",
+      "status": "success"
+    },
+    {
+      "sha": "4d3c2b1",
+      "title": "Add OpenClaw integration",
+      "author": "operator",
+      "age": "1h ago",
+      "status": "success"
+    }
+  ]
+}

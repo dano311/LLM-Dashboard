@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+data/chat-history.json
+data/runtime-events.json
+node_modules/
+logs/
+tmp/
+.DS_Store
+Thumbs.db

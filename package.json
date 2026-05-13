@@ -1,0 +1,15 @@
+{
+  "name": "mission-control-panel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A calm mission control panel for local and remote AI agents.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "check": "node --check server.mjs && node --check public/app.js && node scripts/smoke-test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

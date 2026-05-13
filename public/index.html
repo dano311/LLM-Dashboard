@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mission Control</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div id="app" class="app-shell" data-ready="false">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Mission Control</span>
+        </div>
+        <nav class="nav-section" aria-label="Overview">
+          <p class="nav-label">Overview</p>
+          <button class="nav-item active" data-view="dashboard"></button>
+          <button class="nav-item" data-view="agents"></button>
+          <button class="nav-item" data-view="systems"></button>
+          <button class="nav-item" data-view="deployments"></button>
+          <button class="nav-item" data-view="credentials"></button>
+          <button class="nav-item" data-view="logs"></button>
+          <button class="nav-item" data-view="audit"></button>
+          <button class="nav-item" data-view="alerts"></button>
+        </nav>
+        <nav class="nav-section" aria-label="Infrastructure">
+          <p class="nav-label">Infrastructure</p>
+          <button class="nav-item compact" data-infra="tailscale"></button>
+          <button class="nav-item compact" data-infra="cloudflare"></button>
+          <button class="nav-item compact" data-infra="endpoints"></button>
+          <button class="nav-item compact" data-infra="secrets"></button>
+        </nav>
+        <nav class="nav-section" aria-label="Configuration">
+          <p class="nav-label">Configuration</p>
+          <button class="nav-item compact" data-config="settings"></button>
+          <button class="nav-item compact" data-config="templates"></button>
+          <button class="nav-item compact" data-config="policies"></button>
+          <button class="nav-item compact" data-config="integrations"></button>
+        </nav>
+        <div class="operator-card">
+          <div class="operator-dot"></div>
+          <div>
+            <strong>Operator</strong>
+            <span>admin@mission.local</span>
+          </div>
+          <button class="icon-button" title="Operator menu" aria-label="Operator menu" data-action="operator-menu"></button>
+        </div>
+        <span class="version">v0.1.0</span>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="search">
+            <span data-icon="search" aria-hidden="true"></span>
+            <input id="searchInput" type="search" placeholder="Search agents, systems, logs..." autocomplete="off">
+            <kbd>Ctrl K</kbd>
+          </div>
+          <div class="topbar-status">
+            <div class="status-chip" id="remoteStatus"></div>
+            <div class="status-chip" id="gitStatus"></div>
+            <button class="icon-button theme-toggle" id="themeToggle" title="Toggle theme" aria-label="Toggle theme"></button>
+            <button class="icon-button" id="refreshButton" title="Refresh" aria-label="Refresh"></button>
+          </div>
+        </header>
+
+        <main class="main-grid">
+          <section class="panel agents-panel" aria-labelledby="agentsTitle">
+            <div class="panel-heading">
+              <div>
+                <h1 id="agentsTitle">Agents</h1>
+                <span id="agentCount" class="muted"></span>
+              </div>
+              <div class="toolbar">
+                <button class="icon-button selected" title="Grid view" aria-label="Grid view" data-icon-button="grid"></button>
+                <button class="icon-button" title="List view" aria-label="List view" data-icon-button="list"></button>
+                <button class="button" id="newAgentButton"></button>
+              </div>
+            </div>
+            <div class="agent-grid" id="agentGrid"></div>
+          </section>
+
+          <section class="panel health-panel" aria-labelledby="healthTitle">
+            <div class="panel-heading">
+              <h2 id="healthTitle">System Health</h2>
+              <span class="live-indicator">Live</span>
+            </div>
+            <div class="health-grid" id="healthGrid"></div>
+          </section>
+
+          <section class="panel deployment-panel" aria-labelledby="deploymentTitle">
+            <div class="panel-heading">
+              <h2 id="deploymentTitle">Deployments</h2>
+              <button class="icon-button" title="Deployment settings" aria-label="Deployment settings" data-icon-button="settings"></button>
+            </div>
+            <div class="tabs" role="tablist" aria-label="Deployment options">
+              <button class="tab active" data-deployment-tab="tailscale" role="tab">Tailscale</button>
+              <button class="tab" data-deployment-tab="cloudflare" role="tab">Cloudflare Tunnel</button>
+            </div>
+            <div id="deploymentDetails"></div>
+          </section>
+
+          <section class="panel revisions-panel" aria-labelledby="revisionsTitle">
+            <div class="panel-heading">
+              <h2 id="revisionsTitle">GitHub Revisions</h2>
+              <select id="revisionFilter" aria-label="Revision filter">
+                <option>All Events</option>
+                <option>Commits</option>
+                <option>Deploys</option>
+              </select>
+            </div>
+            <div class="revision-list" id="revisionList"></div>
+          </section>
+
+          <section class="panel audit-panel" aria-labelledby="auditTitle">
+            <div class="panel-heading">
+              <h2 id="auditTitle">Audit Trail</h2>
+            </div>
+            <div class="audit-list" id="auditList"></div>
+          </section>
+        </main>
+      </div>
+
+      <aside class="inspector" aria-label="Agent inspector">
+        <div class="inspector-header">
+          <div>
+            <h2 id="inspectorTitle">Hermes Agent</h2>
+            <span id="inspectorMeta" class="muted"></span>
+          </div>
+          <div class="inspector-actions">
+            <button class="icon-button" id="openAgentButton" title="Open agent" aria-label="Open agent"></button>
+            <button class="icon-button" id="reloadLogsButton" title="Reload logs" aria-label="Reload logs"></button>
+          </div>
+        </div>
+        <div class="tabs inspector-tabs" role="tablist" aria-label="Inspector tabs">
+          <button class="tab active" data-inspector-tab="chat" role="tab">Chat</button>
+          <button class="tab" data-inspector-tab="info" role="tab">Info</button>
+          <button class="tab" data-inspector-tab="actions" role="tab">Actions</button>
+          <button class="tab" data-inspector-tab="credentials" role="tab">Credentials</button>
+          <button class="tab" data-inspector-tab="logs" role="tab">Logs</button>
+          <button class="tab" data-inspector-tab="config" role="tab">Config</button>
+        </div>
+        <div class="inspector-body" id="inspectorBody"></div>
+      </aside>
+    </div>
+
+    <dialog id="agentDialog" class="modal">
+      <form method="dialog" class="modal-card">
+        <div class="panel-heading">
+          <h2>Add Agent</h2>
+          <button class="icon-button" value="cancel" title="Close" aria-label="Close"></button>
+        </div>
+        <label>
+          Agent name
+          <input id="draftAgentName" placeholder="Example: Research Agent">
+        </label>
+        <label>
+          Base URL
+          <input id="draftAgentUrl" placeholder="http://127.0.0.1:5000">
+        </label>
+        <label>
+          Notes
+          <textarea id="draftAgentNotes" placeholder="What should Mission Control do with this agent?"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="button secondary" value="cancel">Cancel</button>
+          <button class="button" id="saveDraftAgent" value="default">Add to session</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+tunnel: mission-control
+credentials-file: C:\Users\YOUR_USER\.cloudflared\mission-control.json
+
+ingress:
+  - hostname: mission.example.com
+    service: http://127.0.0.1:8787
+  - service: http_status:404
