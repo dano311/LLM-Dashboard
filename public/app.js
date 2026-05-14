@@ -240,6 +240,7 @@ function actionIcon(action) {
   if (action === "logs") return "list";
   if (action === "open") return "external";
   if (action === "health") return "monitor";
+  if (action === "wscheck") return "nodes";
   return "refresh";
 }
 
@@ -502,6 +503,7 @@ function actionHelp(action) {
   const help = {
     chat: "Open chat workspace",
     health: "Check health endpoint",
+    wscheck: "Verify WebSocket auth",
     logs: "Fetch latest agent logs",
     restart: "Restart or queue restart",
     open: "Open direct agent UI"
@@ -617,7 +619,7 @@ async function handleAgentAction(agentId, action) {
     render();
     return;
   }
-  if (action === "health") {
+  if (action === "health" || action === "wscheck") {
     try {
       const data = await api(`/api/agents/${agentId}/action`, {
         method: "POST",

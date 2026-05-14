@@ -1,9 +1,11 @@
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync, createReadStream, readFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(root, "public");
@@ -30,6 +32,7 @@ const actionLabels = {
   logs: "Logs",
   restart: "Restart",
   open: "Open",
+  wscheck: "WS Check",
   tasks: "Tasks"
 };
 
@@ -113,7 +116,13 @@ async function readBody(req) {
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    const error = new Error("Invalid JSON body");
+    error.statusCode = 400;
+    throw error;
+  }
 }
 
 function enrichAgent(agent) {
@@ -143,11 +152,18 @@ function enrichAgent(agent) {
 function enrichAuth(auth) {
   if (!auth) return undefined;
   if (auth.type === "bearer" && auth.tokenEnv) {
+    const webSocket = auth.webSocket || {};
+    const mode = webSocket.modeEnv ? process.env[webSocket.modeEnv] || webSocket.mode : webSocket.mode;
     return {
       type: "bearer",
       tokenEnv: auth.tokenEnv,
       configured: Boolean(process.env[auth.tokenEnv]),
-      note: auth.note || ""
+      note: auth.note || "",
+      webSocket: {
+        mode: mode || "header",
+        modeEnv: webSocket.modeEnv,
+        queryParam: webSocket.queryParam || "token"
+      }
     };
   }
   return {
@@ -174,7 +190,7 @@ async function getBootstrap() {
   const chatHistory = await readJson("chat-history.json", {});
   const git = await getGitSnapshot(seed.revisions || []);
   return {
-    agents: seed.agents.map(enrichAgent),
+    agents: seed.agents.map((agent) => sanitizeAgentForClient(enrichAgent(agent))),
     systems: seed.systems || {},
     events: seed.events || [],
     revisions: git.revisions,
@@ -186,6 +202,29 @@ async function getBootstrap() {
       port
     }
   };
+}
+
+function sanitizeAgentForClient(agent) {
+  return {
+    ...agent,
+    endpoints: {
+      ...agent.endpoints,
+      websocket: maskSensitiveUrl(agent.endpoints?.websocket)
+    }
+  };
+}
+
+function maskSensitiveUrl(value) {
+  if (!value) return value;
+  try {
+    const url = new URL(value);
+    ["token", "access_token", "auth", "key"].forEach((key) => {
+      if (url.searchParams.has(key)) url.searchParams.set(key, "redacted");
+    });
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 async function getGitSnapshot(fallbackRevisions) {
@@ -392,6 +431,16 @@ async function handleAction(req, res, agentId) {
       message: proxied?.message || `No health route configured for ${agent.name}.`
     });
   }
+  if (action === "wscheck") {
+    const checked = await checkWebSocket(agent);
+    return sendJson(res, checked.ok ? 200 : 502, {
+      ok: checked.ok,
+      action,
+      proxied: true,
+      message: checked.message,
+      data: checked
+    });
+  }
   const proxied = await proxyAgent(agent, action, { action, agentId });
   if (proxied) return sendJson(res, proxied.ok ? 200 : 502, { action, ...proxied });
   return sendJson(res, 200, {
@@ -399,6 +448,119 @@ async function handleAction(req, res, agentId) {
     action,
     proxied: false,
     message: `${titleCase(action)} queued for ${agent.name} in simulated mode.`
+  });
+}
+
+async function checkWebSocket(agent) {
+  const endpoint = agent.endpoints?.websocket;
+  if (!endpoint) {
+    return { ok: false, message: `${agent.name} has no WebSocket endpoint configured.` };
+  }
+  const token = agent.auth?.tokenEnv ? process.env[agent.auth.tokenEnv] : "";
+  const wsAuth = agent.auth?.webSocket || {};
+  const mode = String(wsAuth.mode || "header").toLowerCase();
+  const queryParam = wsAuth.queryParam || "token";
+  const headers = {};
+  let target = endpoint;
+  if (token && mode === "query") {
+    target = appendQueryParam(endpoint, queryParam, token);
+  } else if (token && mode === "header") {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const result = await performWebSocketHandshake(target, headers);
+  return {
+    ...result,
+    endpoint: maskSensitiveUrl(endpoint),
+    authMode: token ? mode : "none",
+    tokenConfigured: Boolean(token),
+    message: result.ok
+      ? `${agent.name} WebSocket handshake succeeded.`
+      : `${agent.name} WebSocket handshake failed: ${result.message}`
+  };
+}
+
+function appendQueryParam(endpoint, key, value) {
+  const url = new URL(endpoint);
+  url.searchParams.set(key, value);
+  return url.toString();
+}
+
+function performWebSocketHandshake(endpoint, extraHeaders = {}) {
+  return new Promise((resolve) => {
+    let url;
+    try {
+      url = new URL(endpoint);
+    } catch {
+      resolve({ ok: false, message: "Invalid WebSocket URL" });
+      return;
+    }
+    if (!["ws:", "wss:"].includes(url.protocol)) {
+      resolve({ ok: false, message: "Endpoint must use ws:// or wss://" });
+      return;
+    }
+
+    const secure = url.protocol === "wss:";
+    const requestUrl = new URL(url.toString());
+    requestUrl.protocol = secure ? "https:" : "http:";
+    const key = randomBytes(16).toString("base64");
+    const expectedAccept = createHash("sha1")
+      .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+      .digest("base64");
+    const requestHeaders = {
+      Host: url.port ? `${url.hostname}:${url.port}` : url.hostname,
+      Upgrade: "websocket",
+      Connection: "Upgrade",
+      "Sec-WebSocket-Key": key,
+      "Sec-WebSocket-Version": "13",
+      ...extraHeaders
+    };
+
+    const clientRequest = (secure ? httpsRequest : httpRequest)(requestUrl, {
+      method: "GET",
+      headers: requestHeaders,
+      timeout: 8000
+    });
+    let settled = false;
+    const finish = (payload) => {
+      if (settled) return;
+      settled = true;
+      clientRequest.destroy();
+      resolve(payload);
+    };
+
+    clientRequest.on("upgrade", (response, socket) => {
+      const statusCode = response.statusCode || 0;
+      const acceptHeader = response.headers["sec-websocket-accept"];
+      socket.destroy();
+      if (statusCode !== 101) {
+        finish({ ok: false, statusCode, message: `HTTP ${statusCode || "unknown"}` });
+        return;
+      }
+      if (acceptHeader !== expectedAccept) {
+        finish({ ok: false, statusCode, message: "Invalid Sec-WebSocket-Accept header" });
+        return;
+      }
+      finish({ ok: true, statusCode, message: "101 Switching Protocols" });
+    });
+
+    clientRequest.on("response", (response) => {
+      const statusCode = response.statusCode || 0;
+      response.resume();
+      response.on("end", () => {
+        finish({ ok: false, statusCode, message: `HTTP ${statusCode || "unknown"}` });
+      });
+    });
+
+    clientRequest.on("timeout", () => {
+      finish({ ok: false, message: "Timed out waiting for WebSocket handshake" });
+    });
+
+    clientRequest.on("error", (error) => {
+      finish({ ok: false, message: error.message });
+    });
+
+    clientRequest.end();
   });
 }
 
@@ -445,18 +607,18 @@ async function route(req, res) {
       return sendJson(res, 200, await getBootstrap());
     }
     const chatMatch = url.pathname.match(/^\/api\/agents\/([^/]+)\/chat$/);
-    if (req.method === "POST" && chatMatch) return handleChat(req, res, chatMatch[1]);
+    if (req.method === "POST" && chatMatch) return await handleChat(req, res, chatMatch[1]);
     const actionMatch = url.pathname.match(/^\/api\/agents\/([^/]+)\/action$/);
-    if (req.method === "POST" && actionMatch) return handleAction(req, res, actionMatch[1]);
+    if (req.method === "POST" && actionMatch) return await handleAction(req, res, actionMatch[1]);
     const logsMatch = url.pathname.match(/^\/api\/agents\/([^/]+)\/logs$/);
-    if (req.method === "GET" && logsMatch) return handleLogs(res, logsMatch[1]);
+    if (req.method === "GET" && logsMatch) return await handleLogs(res, logsMatch[1]);
     if (req.method === "GET" && url.pathname === "/api/health") {
       return sendJson(res, 200, { ok: true, service: "mission-control", at: new Date().toISOString() });
     }
-    if (req.method === "GET") return serveStatic(req, res);
+    if (req.method === "GET") return await serveStatic(req, res);
     return sendText(res, 405, "Method not allowed");
   } catch (error) {
-    return sendJson(res, 500, { ok: false, message: error.message });
+    return sendJson(res, error.statusCode || 500, { ok: false, message: error.message });
   }
 }
 

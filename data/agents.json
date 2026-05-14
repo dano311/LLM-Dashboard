@@ -13,6 +13,11 @@
       "auth": {
         "type": "bearer",
         "tokenEnv": "OPENCLAW_AUTH_TOKEN",
+        "webSocket": {
+          "modeEnv": "OPENCLAW_WS_AUTH_MODE",
+          "mode": "header",
+          "queryParam": "token"
+        },
         "note": "Used by Mission Control for server-side HTTP calls such as health. Browser-opened canvas pages need cookie auth or an explicit token URL."
       },
       "transport": {
@@ -37,6 +42,7 @@
       "actions": [
         "open",
         "health",
+        "wscheck",
         "chat",
         "logs"
       ],

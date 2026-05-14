@@ -113,10 +113,11 @@ Then make sure the agent's `routes` in `data/agents.json` match its API.
 The OpenClaw card is wired for this gateway:
 
 ```env
-OPENCLAW_URL=http://100.99.165.16:18789
-OPENCLAW_CANVAS_URL=http://100.99.165.16:18789/__openclaw__/canvas/
-OPENCLAW_WS_URL=ws://100.99.165.16:18789/
+OPENCLAW_URL=https://foxbox.cockatoo-roach.ts.net
+OPENCLAW_CANVAS_URL=https://foxbox.cockatoo-roach.ts.net/__openclaw__/canvas/
+OPENCLAW_WS_URL=wss://foxbox.cockatoo-roach.ts.net/
 OPENCLAW_AUTH_TOKEN=clawx-your-token-here
+OPENCLAW_WS_AUTH_MODE=header
 ```
 
 Mission Control can use:
@@ -133,6 +134,32 @@ ws://100.99.165.16:18789/
 ```
 
 The dashboard records that WebSocket endpoint, but live chat needs one more adapter once we know the exact OpenClaw WebSocket message format.
+
+The **WS Check** action opens a server-side WebSocket handshake from Mission Control and verifies the auth handshake. Set:
+
+```env
+OPENCLAW_WS_AUTH_MODE=header
+```
+
+for:
+
+```text
+Authorization: Bearer clawx-...
+```
+
+or:
+
+```env
+OPENCLAW_WS_AUTH_MODE=query
+```
+
+for:
+
+```text
+wss://.../?token=clawx-...
+```
+
+Do not put the token directly in `OPENCLAW_WS_URL` unless you are okay with token-in-URL behavior. Use `OPENCLAW_AUTH_TOKEN` instead.
 
 Do not commit the OpenClaw token. Put it only in `.env`.
 
